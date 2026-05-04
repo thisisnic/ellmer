@@ -5,10 +5,6 @@ Sign up at <https://groq.com>.
 Built on top of
 [`chat_openai_compatible()`](https://ellmer.tidyverse.org/dev/reference/chat_openai_compatible.md).
 
-### Known limitations
-
-groq does not currently support structured data extraction.
-
 ## Usage
 
 ``` r
@@ -103,6 +99,7 @@ Other chatbots:
 [`chat_github()`](https://ellmer.tidyverse.org/dev/reference/chat_github.md),
 [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md),
 [`chat_huggingface()`](https://ellmer.tidyverse.org/dev/reference/chat_huggingface.md),
+[`chat_lmstudio()`](https://ellmer.tidyverse.org/dev/reference/chat_lmstudio.md),
 [`chat_mistral()`](https://ellmer.tidyverse.org/dev/reference/chat_mistral.md),
 [`chat_ollama()`](https://ellmer.tidyverse.org/dev/reference/chat_ollama.md),
 [`chat_openai()`](https://ellmer.tidyverse.org/dev/reference/chat_openai.md),
