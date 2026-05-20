@@ -25,6 +25,12 @@ chat_deepseek(
   echo = NULL,
   api_headers = character()
 )
+
+models_deepseek(
+  base_url = "https://api.deepseek.com",
+  api_key = NULL,
+  credentials = NULL
+)
 ```
 
 ## Arguments
