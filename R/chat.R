@@ -977,6 +977,16 @@ TurnAccumulator <- R6::R6Class(
     value_turn = function(result, type, duration = NA_real_) {
       finish_reason <- value_finish_reason(self$provider, result)
 
+      if (identical(finish_reason, "max_tokens")) {
+        cli::cli_warn(
+          "Response was truncated because it hit the {.arg max_tokens} limit."
+        )
+      } else if (identical(finish_reason, "content_filter")) {
+        cli::cli_warn(
+          "Response was filtered by the provider's content moderation policy."
+        )
+      }
+
       turn <- value_turn(
         self$provider,
         result,

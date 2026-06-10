@@ -1,4 +1,17 @@
 extract_data <- function(turn, type, convert = TRUE, needs_wrapper = FALSE) {
+  if (identical(turn@finish_reason, "max_tokens")) {
+    cli::cli_abort(c(
+      "Structured data extraction failed because the response was truncated.",
+      "i" = "The response hit the {.arg max_tokens} limit before the JSON output was complete.",
+      "i" = "Increase {.arg max_tokens} to allow the model to generate the full response."
+    ))
+  } else if (identical(turn@finish_reason, "content_filter")) {
+    cli::cli_abort(c(
+      "Structured data extraction failed because the response was filtered.",
+      "i" = "The provider's content moderation policy blocked the response."
+    ))
+  }
+
   is_json <- map_lgl(turn@contents, S7_inherits, ContentJson)
   n <- sum(is_json)
   if (n == 0) {
