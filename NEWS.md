@@ -1,5 +1,6 @@
 # ellmer (development version)
 
+* `AssistantTurn` gains a `finish_reason` property that reports why the model stopped generating. This is populated automatically after each chat response (@thisisnic, #3).
 * `chat_portkey()` no longer errors when when using a custom Portkey gateway without the `PORTKEY_VIRTUAL_KEY` env var being set (@thisisnic, #872).
 * `chat_google_vertex()` and `models_google_vertex()` now default `location` and `project_id` to the `GOOGLE_CLOUD_LOCATION` and `GOOGLE_CLOUD_PROJECT` environment variables, no longer incorrectly use `GOOGLE_API_KEY` for authentication, and give a clearer error when cached credentials are invalid (@thisisnic, #994).
 * `models_groq()` lists available models for `chat_groq()` (@thisisnic, #921).
