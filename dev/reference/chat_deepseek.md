@@ -1,5 +1,7 @@
 # Chat with a model hosted on DeepSeek
 
+![\[Official supported provider\]](figures/support-official.svg)
+
 Sign up at <https://platform.deepseek.com>.
 
 Built on top of

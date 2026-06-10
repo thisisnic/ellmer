@@ -1,13 +1,13 @@
 # Chat with a model hosted on the GitHub model marketplace
 
+![\[Official supported provider\]](figures/support-official.svg)
+
 GitHub Models hosts a number of open source and OpenAI models. To access
 the GitHub model marketplace, you will need to apply for and be accepted
 into the beta access program. See
 <https://github.com/marketplace/models> for details.
 
-This function is a lightweight wrapper around
-[`chat_openai_compatible()`](https://ellmer.tidyverse.org/dev/reference/chat_openai_compatible.md)
-with the defaults tweaked for the GitHub Models marketplace.
+The defaults are tweaked for the GitHub Models marketplace.
 
 GitHub also supports the Azure AI Inference SDK, which you can use by
 setting `base_url` to `"https://models.inference.ai.azure.com/"`. This

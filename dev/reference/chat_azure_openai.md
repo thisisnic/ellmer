@@ -1,5 +1,7 @@
 # Chat with a model hosted on Azure OpenAI
 
+![\[Official supported provider\]](figures/support-official.svg)
+
 The [Azure OpenAI
 server](https://azure.microsoft.com/en-us/products/ai-services/openai-service)
 hosts a number of open source models as well as proprietary models from

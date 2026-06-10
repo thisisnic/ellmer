@@ -1,5 +1,7 @@
 # Chat with a model hosted on perplexity.ai
 
+![\[Community supported provider\]](figures/support-community.svg)
+
 Sign up at <https://www.perplexity.ai>.
 
 Perplexity AI is a platform for running LLMs that are capable of

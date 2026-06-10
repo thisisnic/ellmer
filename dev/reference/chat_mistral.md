@@ -1,5 +1,7 @@
 # Chat with a model hosted on Mistral's La Platforme
 
+![\[Community supported provider\]](figures/support-community.svg)
+
 Get your API key from <https://console.mistral.ai/api-keys>.
 
 Built on top of

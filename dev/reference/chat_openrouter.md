@@ -1,5 +1,7 @@
 # Chat with one of the many models hosted on OpenRouter
 
+![\[Community supported provider\]](figures/support-community.svg)
+
 Sign up at <https://openrouter.ai>.
 
 Support for features depends on the underlying model that you use; see

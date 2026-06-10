@@ -1,5 +1,7 @@
 # Chat with an AWS bedrock model
 
+![\[Official supported provider\]](figures/support-official.svg)
+
 [AWS Bedrock](https://aws.amazon.com/bedrock/) provides a number of
 language models, including those from Anthropic's
 [Claude](https://aws.amazon.com/bedrock/claude/), using the Bedrock

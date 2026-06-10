@@ -1,5 +1,7 @@
 # Chat with a model hosted on Groq
 
+![\[Community supported provider\]](figures/support-community.svg)
+
 Sign up at <https://groq.com>.
 
 Built on top of
@@ -18,6 +20,12 @@ chat_groq(
   api_args = list(),
   echo = NULL,
   api_headers = character()
+)
+
+models_groq(
+  base_url = "https://api.groq.com/openai/v1",
+  api_key = NULL,
+  credentials = NULL
 )
 ```
 
