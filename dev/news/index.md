@@ -2,11 +2,43 @@
 
 ## ellmer (development version)
 
-- [`chat_portkey()`](https://ellmer.tidyverse.org/dev/reference/chat_portkey.md)
-  no longer errors when when using a custom Portkey gateway without the
-  `PORTKEY_VIRTUAL_KEY` env var being set
+- `AssistantTurn` gains a `finish_reason` property that reports why the
+  model stopped generating ([@thisisnic](https://github.com/thisisnic),
+  [\#3](https://github.com/tidyverse/ellmer/issues/3)).
+- [`batch_chat()`](https://ellmer.tidyverse.org/dev/reference/batch_chat.md)
+  now supports
+  [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
+  for batch processing via the Gemini Developer API
+  ([@xmarquez](https://github.com/xmarquez),
+  [\#914](https://github.com/tidyverse/ellmer/issues/914)).
+- [`batch_chat()`](https://ellmer.tidyverse.org/dev/reference/batch_chat.md)
+  now supports
+  [`chat_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md)
+  for batch processing via the Groq batch API
+  ([@xmarquez](https://github.com/xmarquez),
+  [\#927](https://github.com/tidyverse/ellmer/issues/927)).
+- `Chat` gains a `set_model()` method for updating the model after chat
+  creation. Unlike some `chat_*()` functions, the model name is not
+  validated ([\#988](https://github.com/tidyverse/ellmer/issues/988)).
+- [`chat()`](https://ellmer.tidyverse.org/dev/reference/chat-any.md) now
+  raises a warning and `chat_structured()` raises an informative error
+  when a response is truncated, filtered, or otherwise incomplete
   ([@thisisnic](https://github.com/thisisnic),
-  [\#872](https://github.com/tidyverse/ellmer/issues/872)).
+  [\#867](https://github.com/tidyverse/ellmer/issues/867)).
+- [`chat_anthropic()`](https://ellmer.tidyverse.org/dev/reference/chat_anthropic.md)
+  now supports `params(reasoning_effort =)` for Claude’s adaptive
+  thinking mode ([@thisisnic](https://github.com/thisisnic),
+  [\#987](https://github.com/tidyverse/ellmer/issues/987)).
+- [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
+  now defaults to the `gemini-3.5-flash` model
+  ([@thisisnic](https://github.com/thisisnic),
+  [\#885](https://github.com/tidyverse/ellmer/issues/885)).
+- [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
+  and
+  [`chat_google_vertex()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
+  now support `params(reasoning_effort =)`
+  ([@thisisnic](https://github.com/thisisnic),
+  [\#873](https://github.com/tidyverse/ellmer/issues/873)).
 - [`chat_google_vertex()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
   and
   [`models_google_vertex()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
@@ -16,45 +48,38 @@
   clearer error when cached credentials are invalid
   ([@thisisnic](https://github.com/thisisnic),
   [\#994](https://github.com/tidyverse/ellmer/issues/994)).
-- [`models_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md)
-  lists available models for
-  [`chat_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md)
-  ([@thisisnic](https://github.com/thisisnic),
-  [\#921](https://github.com/tidyverse/ellmer/issues/921)).
 - [`chat_ollama()`](https://ellmer.tidyverse.org/dev/reference/chat_ollama.md)
   now supports `params(reasoning_effort = ...)` to set thinking for
   reasoning models, and thinking content is now captured in turns
   ([@thisisnic](https://github.com/thisisnic),
   [\#940](https://github.com/tidyverse/ellmer/issues/940)).
-- [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
-  and
-  [`chat_google_vertex()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
-  now support `params(reasoning_effort =)`
-  ([@thisisnic](https://github.com/thisisnic),
-  [\#873](https://github.com/tidyverse/ellmer/issues/873)).
-- [`chat_anthropic()`](https://ellmer.tidyverse.org/dev/reference/chat_anthropic.md)
-  now supports `params(reasoning_effort =)` for Claude’s adaptive
-  thinking mode ([@thisisnic](https://github.com/thisisnic),
-  [\#987](https://github.com/tidyverse/ellmer/issues/987)).
-- [`batch_chat()`](https://ellmer.tidyverse.org/dev/reference/batch_chat.md)
-  now supports
-  [`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md)
-  for batch processing via the Gemini Developer API
-  ([@xmarquez](https://github.com/xmarquez),
-  [\#914](https://github.com/tidyverse/ellmer/issues/914)).
-- `Chat` gains a `set_model()` method for updating the model after chat
-  creation. Unlike some `chat_*()` functions, the model name is not
-  validated ([\#988](https://github.com/tidyverse/ellmer/issues/988)).
 - [`chat_perplexity()`](https://ellmer.tidyverse.org/dev/reference/chat_perplexity.md)
   now defaults to `model = "sonar"` since the previous default
   (`"llama-3.1-sonar-small-128k-online"`) has been removed by Perplexity
   ([@thisisnic](https://github.com/thisisnic),
   [\#538](https://github.com/tidyverse/ellmer/issues/538)).
+- [`chat_portkey()`](https://ellmer.tidyverse.org/dev/reference/chat_portkey.md)
+  no longer errors when when using a custom Portkey gateway without the
+  `PORTKEY_VIRTUAL_KEY` env var being set
+  ([@thisisnic](https://github.com/thisisnic),
+  [\#872](https://github.com/tidyverse/ellmer/issues/872)).
+- New
+  [`chat_posit()`](https://ellmer.tidyverse.org/dev/reference/chat_posit.md)
+  and
+  [`models_posit()`](https://ellmer.tidyverse.org/dev/reference/chat_posit.md)
+  provide access to models hosted by Posit AI, authenticating via an
+  OAuth device flow ([@simonpcouch](https://github.com/simonpcouch),
+  [\#1024](https://github.com/tidyverse/ellmer/issues/1024)).
 - [`models_deepseek()`](https://ellmer.tidyverse.org/dev/reference/chat_deepseek.md)
   lists available models for
   [`chat_deepseek()`](https://ellmer.tidyverse.org/dev/reference/chat_deepseek.md)
   ([@jcrodriguez1989](https://github.com/jcrodriguez1989),
   [\#919](https://github.com/tidyverse/ellmer/issues/919)).
+- [`models_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md)
+  lists available models for
+  [`chat_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md)
+  ([@thisisnic](https://github.com/thisisnic),
+  [\#921](https://github.com/tidyverse/ellmer/issues/921)).
 - `type_object(.additional_properties)` is deprecated. No supported
   provider can return additional properties when using structured
   output. Instead, use an array of name-value pairs

@@ -1,70 +1,36 @@
-# Chat with a Google Gemini or Vertex AI model
+# Chat with a model hosted by Posit AI
 
 ![\[Official supported provider\]](figures/support-official.svg)
 
-Google's AI offering is broken up into two parts: Gemini and Vertex AI.
-Most enterprises are likely to use Vertex AI, and individuals are likely
-to use Gemini.
-
-Use
-[`google_upload()`](https://ellmer.tidyverse.org/dev/reference/google_upload.md)
-to upload files (PDFs, images, video, audio, etc.)
+[Posit AI](https://posit.ai) provides access to a curated set of models
+for Posit subscribers.
 
 ### Authentication
 
-These functions try a number of authentication strategies, in this
-order:
-
-- An API key set in the `GOOGLE_API_KEY` or `GEMINI_API_KEY` env var
-  (Gemini only).
-
-- Google's default application credentials, if the gargle package is
-  installed.
-
-- Viewer-based credentials on Posit Connect, if the connectcreds
-  package.
-
-- **\[experimental\]**. An browser-based OAuth flow, if you're in an
-  interactive session. This currently uses an unverified OAuth app (so
-  you will get a scary warning); we plan to verify in the near future.
+By default, `chat_posit()` authenticates with an OAuth device flow
+against `login.posit.cloud`: the first time you use it, you'll be
+prompted to visit a URL and enter a code. The resulting tokens are
+cached on disk (see
+[`httr2::req_oauth_device()`](https://httr2.r-lib.org/reference/req_oauth_device.html))
+and refreshed automatically, so you should only need to do this once per
+machine.
 
 ## Usage
 
 ``` r
-chat_google_gemini(
+chat_posit(
   system_prompt = NULL,
-  base_url = "https://generativelanguage.googleapis.com/v1beta/",
-  api_key = NULL,
+  base_url = "https://gateway.posit.ai",
   credentials = NULL,
   model = NULL,
   params = NULL,
+  cache = c("5m", "1h", "none"),
   api_args = list(),
   api_headers = character(),
   echo = NULL
 )
 
-chat_google_vertex(
-  location = Sys.getenv("GOOGLE_CLOUD_LOCATION"),
-  project_id = Sys.getenv("GOOGLE_CLOUD_PROJECT"),
-  system_prompt = NULL,
-  model = NULL,
-  params = NULL,
-  api_args = list(),
-  api_headers = character(),
-  echo = NULL
-)
-
-models_google_gemini(
-  base_url = "https://generativelanguage.googleapis.com/v1beta/",
-  api_key = NULL,
-  credentials = NULL
-)
-
-models_google_vertex(
-  location = Sys.getenv("GOOGLE_CLOUD_LOCATION"),
-  project_id = Sys.getenv("GOOGLE_CLOUD_PROJECT"),
-  credentials = NULL
-)
+models_posit(base_url = "https://gateway.posit.ai", credentials = NULL)
 ```
 
 ## Arguments
@@ -75,28 +41,32 @@ models_google_vertex(
 
 - base_url:
 
-  The base URL to the API endpoint.
-
-- api_key:
-
-  **\[deprecated\]** Use `credentials` instead.
+  The base URL of the Posit AI gateway.
 
 - credentials:
 
-  A function that returns a list of authentication headers or `NULL`,
-  the default, to use ambient credentials. See above for details.
+  A zero-argument function that returns the credentials to use in place
+  of the default OAuth device flow, either as a named list of headers or
+  as a function that modifies the request. You should not usually need
+  to set this.
 
 - model:
 
-  The model to use for the chat (defaults to "gemini-3.5-flash"). We
+  The model to use for the chat (defaults to "claude-sonnet-4-6"). We
   regularly update the default, so we strongly recommend explicitly
   specifying a model for anything other than casual use. Use
-  `models_google_gemini()` to see all options.
+  `models_posit()` to see all options.
 
 - params:
 
   Common model parameters, usually created by
   [`params()`](https://ellmer.tidyverse.org/dev/reference/params.md).
+
+- cache:
+
+  How long to cache inputs? Defaults to "5m" (five minutes). Set to
+  "none" to disable caching or "1h" to cache for one hour. This is only
+  supported for Claude models and is ignored for other models.
 
 - api_args:
 
@@ -124,14 +94,6 @@ models_google_vertex(
   [`chat()`](https://ellmer.tidyverse.org/dev/reference/chat-any.md)
   method.
 
-- location:
-
-  Location, e.g. `us-east1`, `me-central1`, `africa-south1` or `global`.
-
-- project_id:
-
-  Project ID.
-
 ## Value
 
 A [Chat](https://ellmer.tidyverse.org/dev/reference/Chat.md) object.
@@ -146,6 +108,7 @@ Other chatbots:
 [`chat_databricks()`](https://ellmer.tidyverse.org/dev/reference/chat_databricks.md),
 [`chat_deepseek()`](https://ellmer.tidyverse.org/dev/reference/chat_deepseek.md),
 [`chat_github()`](https://ellmer.tidyverse.org/dev/reference/chat_github.md),
+[`chat_google_gemini()`](https://ellmer.tidyverse.org/dev/reference/chat_google_gemini.md),
 [`chat_groq()`](https://ellmer.tidyverse.org/dev/reference/chat_groq.md),
 [`chat_huggingface()`](https://ellmer.tidyverse.org/dev/reference/chat_huggingface.md),
 [`chat_lmstudio()`](https://ellmer.tidyverse.org/dev/reference/chat_lmstudio.md),
@@ -161,7 +124,7 @@ Other chatbots:
 
 ``` r
 if (FALSE) { # \dontrun{
-chat <- chat_google_gemini()
+chat <- chat_posit()
 chat$chat("Tell me three jokes about statisticians")
 } # }
 ```
