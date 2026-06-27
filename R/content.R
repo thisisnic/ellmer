@@ -260,7 +260,14 @@ ContentToolResult <- new_class(
   "ContentToolResult",
   parent = Content,
   properties = list(
+    # The raw return value from the tool's R function. Can be any R
+    # object: string, list, data frame, Content, etc. Gets converted to
+    # a string/JSON later by tool_string() when the provider serializes
+    # the turn for the API. (See #858 for plans to move this conversion
+    # earlier.)
     value = class_any,
+    # Non-NULL when the tool call failed. Either a string message or a
+    # condition object from tryCatch.
     error = new_property(
       class = NULL | class_character | new_S3_class("condition"),
       default = NULL,
@@ -277,7 +284,11 @@ ContentToolResult <- new_class(
         )
       }
     ),
+    # Optional metadata not shown to the LLM. Useful for storing data
+    # that downstream consumers (e.g. shinychat) need for display.
     extra = class_list,
+    # The original ContentToolRequest that triggered this tool call.
+    # Links the result back to its request for the API response.
     request = NULL | ContentToolRequest
   )
 )
@@ -307,11 +318,32 @@ method(format, ContentToolResult) <- function(
   }
 }
 
+# Returns TRUE if this tool result represents a failure.
 tool_errored <- function(x) !is.null(x@error)
+
+# Extracts the error message as a string, whether it's stored as a
+# plain string or a condition object.
 tool_error_string <- function(x) {
   if (inherits(x@error, "condition")) conditionMessage(x@error) else x@error
 }
+
+# Converts a ContentToolResult's @value to a string suitable for
+# sending to the LLM. This is where JSON serialization of tool return
+# values happens -- notably, much later than invoke_tool() where the
+# value was first captured. (See #858 for plans to move this earlier.)
+#
+# Called from provider as_json() methods when serializing a tool result
+# turn for the API request.
+#
+# Handles these cases in order:
+# 1. Error results: returns an error message string
+# 2. AsIs values (I()): returned verbatim, no conversion
+# 3. json-classed values: returned verbatim (already JSON)
+# 4. Character vectors: collapsed with newlines
+# 5. Everything else: auto-converted via jsonlite::toJSON() -- this is
+#    the implicit behavior #858 proposes to deprecate
 tool_string <- function(x) {
+  browser() # BROWSER 8: tool_string -- converting @value to string for LLM, inspect `x@value`
   if (tool_errored(x)) {
     paste0("Tool calling failed with error ", tool_error_string(x))
   } else if (inherits(x@value, "AsIs")) {
@@ -321,6 +353,10 @@ tool_string <- function(x) {
   } else if (is.character(x@value)) {
     paste(x@value, collapse = "\n")
   } else {
+    # Fallback: try to serialize arbitrary R objects to JSON. This is
+    # the permissive behavior that #858 proposes to deprecate, since
+    # it silently succeeds on things like data frames but can also
+    # fail on complex objects with a confusing error.
     withCallingHandlers(
       to_json(x@value),
       error = function(err) {
@@ -336,6 +372,8 @@ tool_string <- function(x) {
   }
 }
 
+# Safe version of tool_string() for display purposes (e.g. echo
+# output). Falls back to a placeholder if conversion fails.
 tool_string_preview <- function(x) {
   tryCatch(
     tool_string(x),

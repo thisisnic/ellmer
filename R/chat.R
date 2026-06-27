@@ -206,13 +206,25 @@ Chat <- R6::R6Class(
     #'   `NULL`, then the value of `echo` set when the chat object was created
     #'   will be used.
     chat = function(..., echo = NULL) {
+      # If the last assistant turn requested tool calls that were never
+      # answered (e.g. because a previous chat() was interrupted), create
+      # error ContentToolResults for each one so the API contract is
+      # satisfied: every tool request must have a corresponding result.
       finish_tools <- private$complete_dangling_tool_requests()
 
+      # Build a UserTurn from the user's input (...) plus any dangling tool
+      # results (spliced in via !!!). This single turn is what gets sent to
+      # the LLM first.
       turn <- user_turn(!!!finish_tools, ...)
+      browser() # BROWSER 1: chat() entry -- inspect `turn` and `finish_tools`
+      # Resolve echo: use the argument if provided, otherwise fall back to
+      # the default set when the Chat object was created.
       echo <- check_echo(echo %||% private$echo)
 
-      # Returns a single turn (the final response from the assistant), even if
-      # multiple rounds of back and forth happened.
+      # chat_impl() is a generator that yields text chunks as they arrive.
+      # coro::collect() exhausts the generator, driving the full tool loop
+      # to completion (possibly multiple LLM round-trips). We discard the
+      # collected chunks here since we only need the final turn text.
       coro::collect(private$chat_impl(
         turn,
         stream = echo != "none",
@@ -220,6 +232,8 @@ Chat <- R6::R6Class(
         controller = stream_controller()
       ))
 
+      # Extract the final assistant response text and return it. When
+      # echoing is on, the text was already printed, so return invisibly.
       text <- ellmer_output(self$last_turn()@text)
       if (echo == "none") text else invisible(text)
     },
@@ -482,21 +496,43 @@ Chat <- R6::R6Class(
 
     # If stream = TRUE, yields completion deltas. If stream = FALSE, yields
     # complete assistant turns.
+    # The main tool loop. This is a coro generator that alternates between
+    # sending turns to the LLM and invoking any tools the LLM requests.
+    # The loop continues until the LLM responds without requesting any
+    # tools (i.e. it gives a final text answer).
+    #
+    # Yields: text chunks (strings) or, when yield_as_content = TRUE,
+    # Content objects (used by $stream() to emit structured content).
     chat_impl = generator_method(function(
       self,
       private,
-      user_turn,
-      stream,
-      echo,
-      yield_as_content = FALSE,
-      controller = NULL
+      user_turn, # The initial UserTurn to send to the LLM
+      stream, # TRUE to stream the response, FALSE to wait for the full response
+      echo, # "none", "output", or "all" -- controls what gets printed to stdout
+      yield_as_content = FALSE, # If TRUE, yield Content objects instead of text
+      controller = NULL # Stream controller that allows cancellation
     ) {
+      # Accumulate tool errors so we can warn about them all at once when
+      # the generator finishes (via defer).
       tool_errors <- list()
       defer(warn_tool_errors(tool_errors))
 
+      # OpenTelemetry span for the overall agent loop (covers all LLM
+      # round-trips and tool calls in this chat_impl invocation).
       agent_span <- local_agent_otel_span(private$provider, activate = FALSE)
 
+      # --- THE TOOL LOOP ---
+      # Each iteration: (1) send user_turn to LLM, (2) check if the
+      # assistant wants to call tools, (3) if so, invoke them and set
+      # user_turn to the results for the next iteration. If no tools
+      # requested, user_turn stays NULL and the loop ends.
       while (!is.null(user_turn)) {
+        browser() # BROWSER 2: tool loop iteration -- inspect `user_turn`
+        # (1) Send the user turn to the LLM and get back the assistant's
+        # response. submit_turns() is itself a generator that yields
+        # chunks (streaming) or the complete response (non-streaming).
+        # It also appends both the user turn and the assistant turn to
+        # private$.turns.
         assistant_chunks <- private$submit_turns(
           user_turn,
           stream = stream,
@@ -505,11 +541,14 @@ Chat <- R6::R6Class(
           controller = controller,
           otel_span = agent_span
         )
+        # Pass through all chunks/text from submit_turns to our caller.
         for (chunk in assistant_chunks) {
           yield(chunk)
         }
 
+        # Grab the assistant's completed turn (submit_turns stored it).
         assistant_turn <- self$last_turn()
+        # Assume no more work to do unless we find tool requests below.
         user_turn <- NULL
 
         # Don't invoke tools if the stream was cancelled
@@ -517,7 +556,14 @@ Chat <- R6::R6Class(
           break
         }
 
+        # (2) Check if the assistant's response contains tool requests.
+        browser() # BROWSER 3: after LLM response -- inspect `assistant_turn`
         if (turn_has_tool_request(assistant_turn)) {
+          # (3) invoke_tools() is a generator that iterates over each
+          # ContentToolRequest in the assistant turn, calls the
+          # corresponding R function, and yields ContentToolResult
+          # objects (and optionally ContentToolRequest objects when
+          # yield_request = TRUE).
           tool_calls <- invoke_tools(
             assistant_turn,
             echo = echo,
@@ -527,20 +573,30 @@ Chat <- R6::R6Class(
             otel_span = agent_span
           )
 
+          # Collect all ContentToolResult objects from the generator.
           tool_results <- list()
 
           for (tool_step in tool_calls) {
+            # When streaming content, forward each tool step (requests
+            # and results) to our caller so they can display progress.
             if (yield_as_content) {
               yield(tool_step)
             }
+            # Only keep actual results (not requests) for the next turn.
             if (is_tool_result(tool_step)) {
               tool_results <- c(tool_results, list(tool_step))
             }
           }
 
+          # Wrap the tool results in a UserTurn so the loop sends them
+          # back to the LLM on the next iteration. If there are results,
+          # user_turn will be non-NULL and the while loop continues.
           user_turn <- tool_results_as_turn(tool_results)
+          browser() # BROWSER 4: after tool invocation -- inspect `tool_results` and `user_turn`
         }
 
+        # Print the tool results turn if echo="all", or silently collect
+        # any tool errors to warn about later if echo="none".
         if (echo == "all") {
           cat(format(user_turn))
         } else if (echo == "none") {
@@ -635,23 +691,30 @@ Chat <- R6::R6Class(
       }
     }),
 
-    # If stream = TRUE, yields completion deltas. If stream = FALSE, yields
-    # complete assistant turns.
+    # Handles a single LLM round-trip: sends the user turn to the API and
+    # processes the response. Appends both the user turn and the resulting
+    # assistant turn to private$.turns.
+    #
+    # Yields: text chunks (streaming) or the complete text (non-streaming),
+    # or Content objects when yield_as_content = TRUE.
     submit_turns = generator_method(function(
       self,
       private,
-      user_turn,
-      stream,
-      echo,
-      type = NULL,
-      yield_as_content = FALSE,
-      controller = NULL,
-      otel_span = NULL
+      user_turn, # The UserTurn to send (user message or tool results)
+      stream, # TRUE = streaming mode, FALSE = wait for complete response
+      echo, # "none", "output", or "all"
+      type = NULL, # Type spec for structured data extraction (disables tools)
+      yield_as_content = FALSE, # If TRUE, yield Content objects instead of text
+      controller = NULL, # Stream controller for cancellation
+      otel_span = NULL # Parent OpenTelemetry span
     ) {
+      # When echo="all", print the user turn to stdout so the user can
+      # see what's being sent (prefixed with "> ").
       if (echo == "all") {
         cat_line(format(user_turn), prefix = "> ")
       }
 
+      # Set up OpenTelemetry tracing for this specific LLM call.
       otel_input <- otel_chat_input(private, user_turn)
       chat_span <- local_chat_otel_span(
         private$provider,
@@ -660,46 +723,70 @@ Chat <- R6::R6Class(
         parent = otel_span
       )
 
+      # Make the actual HTTP request to the LLM API. chat_perform() calls
+      # chat_request() (which builds the httr2 request with the serialized
+      # body via chat_body()) then performs it. In streaming mode, returns
+      # a generator of chunks; in value mode, returns the complete response.
+      browser() # BROWSER 5: submit_turns -- about to call LLM API, inspect `user_turn` and `private$.turns`
       response <- chat_perform(
         provider = private$provider,
         mode = if (stream) "stream" else "value",
+        # All conversation turns so far plus the new user turn
         turns = c(private$.turns, list(user_turn)),
+        # Only send tools if we're not doing structured data extraction
         tools = if (is.null(type)) private$tools,
         type = type,
         controller = controller,
         otel_span = chat_span
       )
 
+      # emit() is a function that prints text to stdout based on the echo
+      # setting ("none" = no-op, "output"/"all" = cat the text).
       emit <- emitter(echo)
+      # Track whether we've yielded any text (for trailing newline logic).
       any_text <- FALSE
       turn <- NULL
+      # TurnAccumulator manages building up the assistant Turn object from
+      # streaming chunks and appending turns to private$.turns.
       acc <- TurnAccumulator$new(self, private, controller)
 
       if (stream) {
+        # Record the user turn in the conversation history. finalize_turn()
+        # runs on exit to ensure the assistant turn is always saved even if
+        # the generator is interrupted mid-stream.
         acc$begin_turn(user_turn)
         on.exit(acc$finalize_turn(), add = TRUE)
 
+        # Iterate over streaming chunks from the API.
         result <- NULL
         for (chunk in response) {
+          # Parse the raw chunk into a Content object (e.g. ContentText).
           content <- stream_content(private$provider, chunk)
           if (!is.null(content)) {
+            # Extract text from the content for printing/yielding.
             text <- content_text(content)
             emit(text)
             yield(if (yield_as_content) content else text)
+            # Feed the content into the accumulator to build the Turn.
             acc$update_turn(content)
             any_text <- TRUE
           }
 
+          # Merge raw API chunks together to build the complete result
+          # (needed for token counts, finish reason, etc.).
           result <- stream_merge_chunks(private$provider, result, chunk)
         }
 
         record_chat_otel_span_status(chat_span, private$provider, result)
+        # Finalize the assistant Turn from the accumulated chunks.
         turn <- acc$complete_turn(result, type = type)
         record_chat_otel_span_output(chat_span, turn)
       } else {
+        # Non-streaming: parse the complete JSON response body.
         result <- resp_body_json(response)
         duration <- resp_timing(response)[["total"]] %||% NA_real_
         record_chat_otel_span_status(chat_span, private$provider, result)
+        # Build and store both the user and assistant turns at once.
         turn <- acc$add_turn(user_turn, result, duration, type = type)
         record_chat_otel_span_output(chat_span, turn)
 
@@ -835,21 +922,33 @@ Chat <- R6::R6Class(
       length(private$.turns) > 0 && is_system_turn(private$.turns[[1]])
     },
 
+    # Checks if the last turn in the conversation is an assistant turn
+    # with unanswered tool requests ("dangling" requests). This happens
+    # when a previous chat() call was interrupted or cancelled before the
+    # tool loop could run. LLM APIs require every tool request to have a
+    # matching tool result, so we create error results for each one.
+    #
+    # Returns NULL if there are no dangling requests, or a list of
+    # ContentToolResult objects with error messages that get spliced into
+    # the next user turn.
     complete_dangling_tool_requests = function() {
       if (length(private$.turns) == 0) {
         return(NULL)
       }
 
       last_turn <- private$.turns[[length(private$.turns)]]
+      # Only assistant turns can have tool requests.
       if (last_turn@role != "assistant") {
         return(NULL)
       }
 
+      # Extract any ContentToolRequest objects from the turn's contents.
       tool_requests <- keep(last_turn@contents, is_tool_request)
       if (length(tool_requests) == 0) {
         return(NULL)
       }
 
+      # Create an error ContentToolResult for each unanswered request.
       lapply(tool_requests, function(req) {
         ContentToolResult(
           error = "Chat ended before the tool could be invoked.",

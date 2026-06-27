@@ -1,14 +1,20 @@
-# Currently performing chat request is not generic as there appears to
-# be sufficiently genericity elsewhere to handle the API variations.
-# We will recconsider this in the future if necessary.
+# Builds and performs the HTTP request to the LLM API. This is the
+# bridge between the R-side conversation state and the actual network
+# call. Not generic -- provider-specific behavior is handled by
+# chat_request() and chat_body() which are S7 generics.
+#
+# The `turns` list includes the full conversation history plus the new
+# user turn. chat_request() calls chat_body() which calls as_json()
+# on each turn -- and that's where tool_string() runs to convert
+# ContentToolResult values to JSON/strings for the API.
 chat_perform <- function(
   provider,
   mode = c("value", "stream", "async-stream", "async-value"),
-  turns,
-  tools = NULL,
-  type = NULL,
+  turns, # Full conversation: all prior turns + the new user turn
+  tools = NULL, # Named list of Tool objects (NULL during data extraction)
+  type = NULL, # Type spec for structured data extraction
   otel_span = NULL,
-  controller = NULL
+  controller = NULL # Stream controller for cancellation
 ) {
   mode <- arg_match(mode)
   stream <- mode %in% c("stream", "async-stream")
@@ -16,6 +22,10 @@ chat_perform <- function(
 
   setup_active_promise_otel_span(otel_span)
 
+  # Build the httr2 request. This is where the entire conversation
+  # (including tool results) gets serialized to JSON via chat_body()
+  # and the provider's as_json() methods.
+  browser() # BROWSER 9: chat_perform -- about to build request, inspect `turns` and `tools`
   req <- chat_request(
     provider = provider,
     turns = turns,
@@ -24,6 +34,7 @@ chat_perform <- function(
     type = type
   )
 
+  # Perform the request in the appropriate mode.
   switch(
     mode,
     "value" = req_perform(req),
