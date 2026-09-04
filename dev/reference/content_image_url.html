@@ -14,7 +14,7 @@ image, while content_image_file() is used to provide the image data itself."><me
 
     <a class="navbar-brand me-2" href="../index.html">ellmer</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.1.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.2.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -118,6 +118,13 @@ and <code>!</code> to ignore aspect ratio (e.g. <code>"300x200&gt;!"</code>).</p
     <p>An input object suitable for including in the <code>...</code> parameter of
 the <code><a href="chat-any.html">chat()</a></code>, <code>stream()</code>, <code>chat_async()</code>, or <code>stream_async()</code> methods.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><code>content_image_file()</code> embeds the image's contents in every request, so for
+a large image, or one you'll refer to across several turns, prefer
+<code>chat$file_upload()</code>. It uploads the file once and later turns reference
+it by id.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -151,7 +158,7 @@ the <code><a href="chat-any.html">chat()</a></code>, <code>stream()</code>, <cod
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
   </div></footer></body></html>
