@@ -82,9 +82,9 @@ The simplest approach is to use shinychat’s Shiny module to add a chat
 UI to your app—similar to the app created by
 [`live_browser()`](https://ellmer.tidyverse.org/reference/live_console.md)—using
 the
-[`shinychat::chat_mod_ui()`](https://posit-dev.github.io/shinychat/r/reference/chat_app.html)
+[`shinychat::chat_mod_ui()`](https://posit-dev.github.io/shinychat/r/reference/chat_mod_ui.html)
 and
-[`shinychat::chat_mod_server()`](https://posit-dev.github.io/shinychat/r/reference/chat_app.html)
+[`shinychat::chat_mod_server()`](https://posit-dev.github.io/shinychat/r/reference/chat_mod_ui.html)
 functions. These module functions connect an
 [`ellmer::Chat`](https://ellmer.tidyverse.org/reference/Chat.md) object
 to
@@ -103,7 +103,7 @@ ui <- bslib::page_fillable(
 server <- function(input, output, session) {
   chat <- ellmer::chat_openai(
     system_prompt = "You're a trickster who answers in riddles",
-    model = "gpt-4.1-nano"
+    model = "gpt-5.4-mini"
   )
 
   chat_mod_server("chat", chat)
@@ -168,7 +168,7 @@ article](https://shiny.posit.co/r/articles/improve/nonblocking/).
         # multi-turn conversation.
         chat <- chat_openai(
           system_prompt = "You are a rambling chatbot who likes to tell stories but gets distracted easily.",
-          model = "gpt-4.1-nano"
+          model = "gpt-5.4-mini"
         )
 
         # Stream the chat completion into the markdown stream. `markdown_stream()`
